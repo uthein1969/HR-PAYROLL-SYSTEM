@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}{{ emp.name if emp else 'New employee' }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">{{ emp.name if emp else 'New employee' }}</h1>
+    <div class="page-sub">
+      {% if emp %}{{ emp.code }} · joined {{ emp.join_date }}{% else %}Create an employee record{% endif %}
+    </div>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_for('employees_list') }}">← Back to list</a>
+</div>
+
+<form method="post" action="{{ url_for('employee_update', employee_id=emp.id) if emp else url_for('employee_new') }}">
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Profile</h2></div>
+  <div class="panel-body">
+    <div class="form-grid">
+      <div class="field"><label>Employee code *</label>
+        <input type="text" name="code" value="{{ emp.code if emp }}" required placeholder="EMP-001"></div>
+      <div class="field"><label>Full name *</label>
+        <input type="text" name="name" value="{{ emp.name if emp }}" required></div>
+      <div class="field"><label>NRC / Passport</label>
+        <input type="text" name="nrc" value="{{ emp.nrc if emp }}"></div>
+      <div class="field"><label>Department</label>
+        <input type="text" name="department" value="{{ emp.department if emp }}" placeholder="Finance"></div>
+      <div class="field"><label>Position</label>
+        <input type="text" name="position" value="{{ emp.position if emp }}"></div>
+      <div class="field"><label>Join date *</label>
+        <input type="date" name="join_date" value="{{ emp.join_date if emp else today().isoformat() }}" required></div>
+      <div class="field"><label>Email</label>
+        <input type="email" name="email" value="{{ emp.email if emp }}"></div>
+      <div class="field"><label>Phone</label>
+        <input type="text" name="phone" value="{{ emp.phone if emp }}"></div>
+      <div class="field"><label>Bank account</label>
+        <input type="text" name="bank_account" value="{{ emp.bank_account if emp }}"></div>
+      <div class="field"><label>Residency (PIT reliefs)</label>
+        <select name="residency">
+          <option value="resident" {{ 'selected' if emp and emp.residency == 'resident' }}>Resident — reliefs apply</option>
+          <option value="non_resident" {{ 'selected' if emp and emp.residency == 'non_resident' }}>Non-resident — no reliefs</option>
+        </select></div>
+      <div class="field"><label>Status</label>
+        <select name="status">
+          <option value="active" {{ 'selected' if emp and emp.status == 'active' }}>Active</option>
+          <option value="inactive" {{ 'selected' if emp and emp.status == 'inactive' }}>Inactive</option>
+        </select></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Tax declaration</h2>
+    <span class="small muted">Income Tax Law s.6(g)(2) reliefs</span></div>
+  <div class="panel-body">
+    <div class="form-grid">
+      <div class="field"><label>Tax year</label>
+        <select name="tax_year">
+          {% for ty in tax_years %}<option value="{{ ty }}"
+            {{ 'selected' if decl and decl.tax_year == ty }}>{{ ty }}</option>{% endfor %}
+        </select></div>
+      <div class="field"><label>Children (allowance 500,000 each)</label>
+        <input type="number" name="children_count" min="0" max="20" value="{{ decl.children_count if decl else 0 }}"></div>
+      <div class="field"><label>Parents (allowance 1,000,000 each)</label>
+        <input type="number" name="parents_count" min="0" max="10" value="{{ decl.parents_count if decl else 0 }}"></div>
+      <div class="field"><label>Life insurance premium</label>
+        <input type="number" name="insurance_premium" step="1" min="0" value="{{ decl.insurance_premium if decl else 0 }}"></div>
+      <div class="field"><label>Prescribed savings</label>
+        <input type="number" name="savings" step="1" min="0" value="{{ decl.savings if decl else 0 }}"></div>
+    </div>
+    <div class="checks">
+      <label class="check"><input type="checkbox" name="spouse_claimed" value="1"
+        {{ 'checked' if decl and decl.spouse_claimed }}> Spouse allowance (1,000,000) — spouse has no income</label>
+    </div>
+    {% if emp %}
+    <div class="actions"><button class="btn btn-primary" type="submit">Save changes</button></div>
+    {% else %}
+    <div class="field" style="margin-top:16px;max-width:260px">
+      <label>Starting basic salary (optional)</label>
+      <input type="number" name="basic_salary" step="1" min="0" placeholder="500000">
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">Create employee</button>
+      <a class="btn btn-ghost" href="{{ url_for('employees_list') }}">Cancel</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+</form>
+
+{% if emp %}
+<div class="grid-2">
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">Salary components</h2></div>
+    <div class="scroll-x">
+      <table>
+        <thead><tr><th>Code</th><th>Name</th><th class="num">Amount</th><th>Kind</th>
+          <th>Tax</th><th>SSB</th><th>Rec.</th><th></th></tr></thead>
+        <tbody>
+        {% for c in components %}
+          <tr>
+            <td class="num">{{ c.code }}</td>
+            <td>{{ c.name }}</td>
+            <td class="num">{{ c.amount|mmk }}</td>
+            <td class="muted small">{{ c.kind }}</td>
+            <td>{{ '✓' if c.taxable else '—' }}</td>
+            <td>{{ '✓' if c.ssb_eligible else '—' }}</td>
+            <td>{{ '✓' if c.recurring else '—' }}</td>
+            <td>
+              <form method="post" action="{{ url_for('employee_delete_component', employee_id=emp.id, cid=c.id) }}"
+                    onsubmit="return confirm('Remove {{ c.name }}?')">
+                <button class="btn btn-danger btn-sm" type="submit">✕</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="empty">No salary components. Add one below.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-body" style="border-top:1px solid var(--line)">
+      <form method="post" action="{{ url_for('employee_add_component', employee_id=emp.id) }}">
+        <div class="form-grid">
+          <div class="field"><label>Code</label><input type="text" name="code" value="BASIC"></div>
+          <div class="field"><label>Name</label><input type="text" name="name" placeholder="Basic Salary"></div>
+          <div class="field"><label>Amount (MMK)</label><input type="number" name="amount" step="1" min="0" required></div>
+          <div class="field"><label>Kind</label>
+            <select name="kind">
+              <option value="earning">earning</option>
+              <option value="deduction">deduction</option>
+              <option value="reimbursement">reimbursement</option>
+            </select></div>
+        </div>
+        <div class="checks">
+          <label class="check"><input type="checkbox" name="taxable" value="1" checked> Taxable (PIT)</label>
+          <label class="check"><input type="checkbox" name="ssb_eligible" value="1" checked> SSB-eligible</label>
+          <label class="check"><input type="checkbox" name="recurring" value="1" checked> Recurring monthly</label>
+        </div>
+        <div class="actions"><button class="btn btn-primary" type="submit">Add component</button></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">Dependents</h2></div>
+    <div class="scroll-x">
+      <table>
+        <thead><tr><th>Type</th><th>Name</th><th>Date of birth</th></tr></thead>
+        <tbody>
+        {% for d in dependents %}
+          <tr><td><span class="badge badge-approved">{{ d.kind }}</span></td>
+              <td>{{ d.name or '—' }}</td><td class="num">{{ d.dob or '—' }}</td></tr>
+        {% else %}
+          <tr><td colspan="3" class="empty">No dependents recorded.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-body" style="border-top:1px solid var(--line)">
+      <form method="post" action="{{ url_for('employee_add_dependent', employee_id=emp.id) }}">
+        <div class="form-grid">
+          <div class="field"><label>Type</label>
+            <select name="kind"><option value="spouse">spouse</option>
+              <option value="child">child</option><option value="parent">parent</option></select></div>
+          <div class="field"><label>Name</label><input type="text" name="name"></div>
+          <div class="field"><label>Date of birth</label><input type="date" name="dob"></div>
+        </div>
+        <div class="actions"><button class="btn btn-primary" type="submit">Add dependent</button></div>
+      </form>
+    </div>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

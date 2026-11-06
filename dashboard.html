@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Payroll Dashboard</h1>
+    <div class="page-sub">Latest computed run: <strong>{{ period }}</strong> · figures in MMK</div>
+  </div>
+  <div class="toolbar">
+    <a class="btn btn-primary" href="{{ url_for('payroll_runs') }}">◈ Run payroll</a>
+    <a class="btn btn-ghost" href="{{ url_for('employee_new') }}">＋ Add employee</a>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">Active headcount</div>
+    <div class="kpi-value">{{ kpi.headcount }}</div>
+    <div class="kpi-note">SSB mandatory at ≥ 5 workers</div>
+  </div>
+  <div class="kpi accent">
+    <div class="kpi-label">Gross payroll</div>
+    <div class="kpi-value">{{ kpi.gross|mmk }}</div>
+    <div class="kpi-note">{{ period }}</div>
+  </div>
+  <div class="kpi pit">
+    <div class="kpi-label">PIT withheld</div>
+    <div class="kpi-value">{{ kpi.pit|mmk }}</div>
+    <div class="kpi-note">due 15th of next month</div>
+  </div>
+  <div class="kpi ssb">
+    <div class="kpi-label">SSB (2% + 3%)</div>
+    <div class="kpi-value">{{ (kpi.ssb_ee + kpi.ssb_er)|mmk }}</div>
+    <div class="kpi-note">EE {{ kpi.ssb_ee|mmk }} · ER {{ kpi.ssb_er|mmk }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Net pay</div>
+    <div class="kpi-value">{{ kpi.net|mmk }}</div>
+    <div class="kpi-note">paid to employees</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <div class="panel-head">
+      <h2 class="panel-title">Payroll trend</h2>
+      <span class="small muted">last {{ trend|length }} runs</span>
+    </div>
+    <div class="panel-body">
+      {% if trend %}
+      <div class="bars">
+        {% for t in trend %}
+        {% set pct = (t.gross or 0) / max_gross * 100 %}
+        {% set pitpct = (t.pit or 0) / (t.gross or 1) * pct %}
+        <div class="bar-col" title="{{ t.period }} · gross {{ t.gross|mmk }}">
+          <div class="bar-stack">
+            {% if pitpct > 0 %}<div class="bar pit" style="height:{{ pitpct }}%"></div>{% endif %}
+            <div class="bar" style="height:{{ pct - pitpct }}%"></div>
+          </div>
+          <div class="bar-label">{{ t.period[5:] }}/{{ t.period[2:4] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="legend">
+        <span><i style="background:#1f6feb"></i>Gross</span>
+        <span><i style="background:#7c4dff"></i>PIT withheld</span>
+      </div>
+      {% else %}
+      <div class="empty"><div class="big">◈</div>No payroll runs yet.<br>
+        <a href="{{ url_for('payroll_runs') }}">Compute the first run →</a></div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">By department</h2></div>
+    <div class="panel-body">
+      {% set max_dept = (depts|map(attribute='gross')|max) or 1 %}
+      {% for d in depts %}
+      <div class="dept-row">
+        <div class="dept-name">{{ d.department }}</div>
+        <div class="dept-track">
+          <div class="dept-fill" style="width:{{ (d.gross / max_dept * 100) if max_dept else 0 }}%"></div>
+        </div>
+        <div class="dept-val">{{ d.gross|mmk }} · {{ d.headcount }}p</div>
+      </div>
+      {% else %}
+      <div class="empty">No employee data yet.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2 class="panel-title">Recent payroll runs</h2>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('payroll_runs') }}">View all</a>
+  </div>
+  <div class="scroll-x">
+    <table>
+      <thead><tr>
+        <th>Period</th><th class="num">Headcount</th><th class="num">Gross</th>
+        <th class="num">PIT</th><th class="num">SSB (EE)</th><th class="num">SSB (ER)</th>
+        <th class="num">Net pay</th>
+      </tr></thead>
+      <tbody>
+      {% for s in summary %}
+        <tr>
+          <td><a href="{{ url_for('payroll_run_detail', run_id=s.run_id) }}">{{ s.period }}</a></td>
+          <td class="num">{{ s.headcount }}</td>
+          <td class="num">{{ s.gross|mmk }}</td>
+          <td class="num">{{ s.pit|mmk }}</td>
+          <td class="num">{{ s.ssb_ee|mmk }}</td>
+          <td class="num">{{ s.ssb_er|mmk }}</td>
+          <td class="num">{{ s.net|mmk }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="empty">Nothing computed yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

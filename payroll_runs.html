@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Payroll runs{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Payroll runs</h1>
+    <div class="page-sub">Compute monthly PIT + SSB withholding for all active employees</div>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">New run</h2></div>
+  <div class="panel-body">
+    <form method="post" action="{{ url_for('payroll_run_create') }}">
+      <div class="form-grid">
+        <div class="field"><label>Payroll period</label>
+          <select name="period">
+            {% for p in periods %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+          </select></div>
+        <div class="field" style="justify-content:flex-end">
+          <div class="checks" style="padding-top:0">
+            <label class="check">
+              <input type="checkbox" name="include_attendance" value="1" checked>
+              Apply attendance (unpaid leave / OT)</label>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">◈ Compute payroll</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Run history</h2></div>
+  <div class="scroll-x">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Period</th><th>Status</th><th>Rules</th>
+        <th class="num">Employees</th><th class="num">Net pay</th><th>Created</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for r in runs %}
+        <tr>
+          <td class="num">{{ r.id }}</td>
+          <td><a href="{{ url_for('payroll_run_detail', run_id=r.id) }}"><strong>{{ r.period }}</strong></a></td>
+          <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+          <td class="small muted">{{ r.rule_key or '—' }}</td>
+          <td class="num">{{ r.slip_count }}</td>
+          <td class="num">{{ '%.0f' % (r.total_net or 0) }}</td>
+          <td class="small muted">{{ r.created_at }}</td>
+          <td><a class="btn btn-ghost btn-sm" href="{{ url_for('payroll_run_detail', run_id=r.id) }}">Open</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="empty"><div class="big">◈</div>No runs yet — compute one above.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

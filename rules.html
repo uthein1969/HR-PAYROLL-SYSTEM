@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Statutory rules{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Statutory rules</h1>
+    <div class="page-sub">Versioned configuration — <strong>tax rules are data, not code</strong></div>
+  </div>
+</div>
+
+<div class="note warn">
+  <strong>Verify before production.</strong> The PIT band table and the 4,800,000 exemption basis
+  come from secondary payroll sources. Confirm against the official Union Tax Law / IRD
+  (<a href="https://www.ird.gov.mm" target="_blank" rel="noopener">ird.gov.mm</a>) and update the
+  rule record in <code>payroll/rules.py</code>. A new law year is an appended record, not a code edit.
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <div class="panel-head">
+      <h2 class="panel-title">PIT — progressive bands</h2>
+      <span class="small muted">{{ active.key }} · active today</span>
+    </div>
+    <div class="scroll-x">
+      <table class="bands">
+        <thead><tr><th>Annual taxable income (MMK)</th><th></th><th>Rate</th></tr></thead>
+        <tbody>
+        {% for b in active.tax_bands %}
+          <tr>
+            <td>{{ '{:,.0f}'.format(b.lower) }}{% if b.upper %} – {{ '{:,.0f}'.format(b.upper) }}{% else %} +{% endif %}</td>
+            <td class="muted small">
+              {% if loop.first %}zero band{% elif b.upper %}band {{ loop.index }}{% else %}top band{% endif %}</td>
+            <td class="num">{{ '%g'|format(b.rate * 100) }}%</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-body" style="border-top:1px solid var(--line)">
+      <table class="kv">
+        <tbody>
+          <tr><td>Basic relief</td>
+              <td class="num">{{ '%g'|format(active.relief.basic_pct * 100) }}% of income · capped {{ active.relief.basic_cap|mmk }}/yr</td></tr>
+          <tr><td>Spouse allowance</td><td class="num">{{ active.relief.spouse|mmk }}</td></tr>
+          <tr><td>Child allowance (each)</td><td class="num">{{ active.relief.child|mmk }}</td></tr>
+          <tr><td>Parent allowance (each)</td><td class="num">{{ active.relief.parent|mmk }}</td></tr>
+          <tr><td>Exemption threshold</td>
+              <td class="num">{{ active.exemption.threshold|mmk }} <span class="muted small">({{ active.exemption.basis }})</span></td></tr>
+          <tr><td>Non-residents</td><td>no personal reliefs</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">SSB — Social Security Board</h2>
+      <span class="small muted">Social Security Law 2012</span></div>
+    <div class="scroll-x">
+      <table>
+        <thead><tr><th>Contributor</th><th class="num">Rate</th><th class="num">Max / month</th></tr></thead>
+        <tbody>
+          <tr><td>Employer</td><td class="num">{{ '%g'|format(active.ssb.employer_rate * 100) }}%</td>
+              <td class="num">{{ active.ssb.wage_ceiling|mmk }} base</td></tr>
+          <tr><td>Employee</td><td class="num">{{ '%g'|format(active.ssb.employee_rate * 100) }}%</td>
+              <td class="num">—</td></tr>
+          <tr class="tfoot"><td>Total</td><td class="num">{{ '%g'|format(active.ssb.total_rate * 100) }}%</td>
+              <td class="num">15,000 max</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-body" style="border-top:1px solid var(--line)">
+      <table class="kv">
+        <tbody>
+          <tr><td>Wage ceiling (contribution base)</td>
+              <td class="num">{{ active.ssb.wage_ceiling|mmk }} / month</td></tr>
+          <tr><td>Mandatory from</td>
+              <td class="num">{{ active.ssb.mandatory_headcount }} workers</td></tr>
+          <tr><td>Payment deadline</td><td>15th of the following month</td></tr>
+        </tbody>
+      </table>
+      <div class="note">Salary above the {{ active.ssb.wage_ceiling|mmk }} ceiling is
+        <strong>outside the SSB system</strong> entirely — do not apply 5% to the full salary.</div>
+    </div>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Rule set versions</h2></div>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th>Key</th><th>Effective from</th><th>Effective to</th><th>Source</th></tr></thead>
+      <tbody>
+      {% for r in rule_sets %}
+        <tr class="{{ '' if r.key == active.key else 'muted' }}">
+          <td><strong>{{ r.key }}</strong>
+            {% if r.key == active.key %}<span class="badge badge-active">in force</span>{% endif %}</td>
+          <td class="num">{{ r.effective_from }}</td>
+          <td class="num">{{ r.effective_to }}</td>
+          <td class="small">{{ r.source }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Payslip {{ slip.employee_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Payslip — {{ slip.employee_name }}</h1>
+    <div class="page-sub">{{ slip.period }} · rules <strong>{{ slip.rule_key }}</strong></div>
+  </div>
+  <div class="toolbar">
+    <a class="btn btn-ghost" href="{{ url_for('payroll_run_detail', run_id=slip.run_id) }}">← Back to run</a>
+    <button class="btn btn-primary" onclick="window.print()">⎙ Print</button>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">PIT computation</h2>
+      <span class="small muted">Income Tax Law s.6(g)(2)</span></div>
+    <div class="scroll-x">
+      <table class="kv">
+        <tbody>
+        {% for row in breakdown %}
+          <tr>
+            <td class="{{ 'muted' if row.label.startswith('  ') }}">{{ row.label }}</td>
+            <td class="num">{{ row.amount|mmk }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-body" style="border-top:1px solid var(--line)">
+      <div class="note">
+        <strong>Monthly PIT withheld</strong> is the annual PIT divided by 12.
+        The employer remits it to the IRD by the <strong>15th of the following month</strong>.
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">SSB contribution</h2>
+      <span class="small muted">Social Security Law 2012</span></div>
+    <div class="scroll-x">
+      <table class="kv">
+        <tbody>
+          <tr><td>Contribution base (capped at 300,000)</td><td class="num">{{ slip.ssb_base|mmk }}</td></tr>
+          <tr><td>Employee share (2%)</td><td class="num">{{ slip.ssb_employee|mmk }}</td></tr>
+          <tr><td>Employer share (3%)</td><td class="num">{{ slip.ssb_employer|mmk }}</td></tr>
+          <tr class="tfoot"><td>Total to SSB</td>
+            <td class="num">{{ (slip.ssb_employee|dec + slip.ssb_employer|dec)|mmk }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-body" style="border-top:1px solid var(--line)">
+      <div class="note warn">The employer's 3% share is a <strong>cost-to-company</strong> figure —
+        it is never deducted from the employee's net pay.</div>
+    </div>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Summary</h2></div>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th>Line</th><th class="num">Amount (MMK)</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Gross earnings</strong></td><td class="num"><strong>{{ slip.gross_earnings|mmk }}</strong></td></tr>
+        <tr><td class="muted">PIT (monthly withholding)</td><td class="num">− {{ slip.pit_monthly|mmk }}</td></tr>
+        <tr><td class="muted">SSB employee (2%)</td><td class="num">− {{ slip.ssb_employee|mmk }}</td></tr>
+        <tr><td class="muted">Other deductions</td>
+            <td class="num">− {{ (slip.total_deductions|dec - slip.pit_monthly|dec - slip.ssb_employee|dec)|mmk }}</td></tr>
+        <tr class="tfoot"><td>NET PAY</td><td class="num">{{ slip.net_pay|mmk }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Memo — annualised PIT basis</h2></div>
+  <div class="scroll-x">
+    <table class="kv">
+      <tbody>
+        <tr><td>Annual gross income</td><td class="num">{{ slip.annual_gross|mmk }}</td></tr>
+        <tr><td>Basic relief (20%, capped 10,000,000)</td><td class="num">− {{ slip.basic_relief|mmk }}</td></tr>
+        <tr><td>Dependant / other allowances</td><td class="num">− {{ slip.allowances_total|mmk }}</td></tr>
+        <tr class="tfoot"><td>Taxable income</td><td class="num">{{ slip.taxable_income|mmk }}</td></tr>
+        <tr><td>Annual PIT</td><td class="num">{{ slip.pit_annual|mmk }}</td></tr>
+        <tr><td>Reimbursements (non-taxable)</td><td class="num">{{ slip.reimbursements|mmk }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

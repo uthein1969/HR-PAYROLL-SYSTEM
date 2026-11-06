@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Employees{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Employees</h1>
+    <div class="page-sub">{{ employees|length }} record(s)</div>
+  </div>
+  <div class="toolbar">
+    <form method="get" class="toolbar">
+      <input class="search" type="text" name="q" value="{{ q }}" placeholder="Search name, code, department…">
+      <button class="btn btn-ghost" type="submit">Search</button>
+    </form>
+    <a class="btn btn-primary" href="{{ url_for('employee_new') }}">＋ Add employee</a>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="scroll-x">
+    <table>
+      <thead><tr>
+        <th>Code</th><th>Name</th><th>Department</th><th>Position</th>
+        <th>Joined</th><th>Residency</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for e in employees %}
+        <tr>
+          <td class="num">{{ e.code }}</td>
+          <td><a href="{{ url_for('employee_detail', employee_id=e.id) }}"><strong>{{ e.name }}</strong></a></td>
+          <td>{{ e.department or '—' }}</td>
+          <td class="muted">{{ e.position or '—' }}</td>
+          <td class="num">{{ e.join_date }}</td>
+          <td>
+            <span class="badge {{ 'badge-resident' if e.residency == 'resident' else 'badge-non' }}">
+              {{ 'Resident' if e.residency == 'resident' else 'Non-resident' }}</span>
+          </td>
+          <td><span class="badge {{ 'badge-active' if e.status == 'active' else 'badge-inactive' }}">{{ e.status }}</span></td>
+          <td><a class="btn btn-ghost btn-sm" href="{{ url_for('employee_detail', employee_id=e.id) }}">Open</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="empty"><div class="big">☺</div>No employees match.<br>
+          <a href="{{ url_for('employee_new') }}">Add the first employee →</a></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

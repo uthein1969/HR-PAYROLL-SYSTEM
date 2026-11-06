@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run.period }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Payroll run — {{ run.period }}</h1>
+    <div class="page-sub">
+      Run #{{ run.id }} · rules <strong>{{ run.rule_key }}</strong> ·
+      <span class="badge badge-{{ run.status }}">{{ run.status }}</span>
+    </div>
+  </div>
+  <div class="toolbar">
+    <a class="btn btn-ghost" href="{{ url_for('payroll_runs') }}">← All runs</a>
+    {% if run.status == 'draft' %}
+    <form method="post" action="{{ url_for('payroll_run_status', run_id=run.id) }}">
+      <input type="hidden" name="status" value="approved">
+      <button class="btn btn-ok" type="submit">✓ Approve run</button>
+    </form>
+    {% elif run.status == 'approved' %}
+    <form method="post" action="{{ url_for('payroll_run_status', run_id=run.id) }}">
+      <input type="hidden" name="status" value="locked">
+      <button class="btn btn-danger" type="submit">🔒 Lock run</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-label">Employees</div>
+    <div class="kpi-value">{{ slips|length }}</div></div>
+  <div class="kpi accent"><div class="kpi-label">Gross</div>
+    <div class="kpi-value">{{ totals.gross|mmk }}</div></div>
+  <div class="kpi pit"><div class="kpi-label">PIT withheld</div>
+    <div class="kpi-value">{{ totals.pit|mmk }}</div></div>
+  <div class="kpi ssb"><div class="kpi-label">SSB employee 2%</div>
+    <div class="kpi-value">{{ totals.ssb_ee|mmk }}</div></div>
+  <div class="kpi ssb"><div class="kpi-label">SSB employer 3%</div>
+    <div class="kpi-value">{{ totals.ssb_er|mmk }}</div></div>
+  <div class="kpi"><div class="kpi-label">Net pay</div>
+    <div class="kpi-value">{{ totals.net|mmk }}</div></div>
+</div>
+
+{% if run.status == 'locked' %}
+<div class="note warn"><strong>Locked.</strong> This run is immutable. Corrections must be made
+through a separate adjustment run.</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head">
+    <h2 class="panel-title">Payslips</h2>
+    <span class="small muted">click a row for the full PIT breakdown</span>
+  </div>
+  <div class="scroll-x">
+    <table>
+      <thead><tr>
+        <th>Code</th><th>Employee</th><th class="num">Gross</th>
+        <th class="num">PIT</th><th class="num">SSB 2%</th><th class="num">Deductions</th>
+        <th class="num">Net pay</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for s in slips %}
+        <tr>
+          <td class="num">{{ s.employee_code }}</td>
+          <td><strong>{{ s.employee_name }}</strong></td>
+          <td class="num">{{ s.gross_earnings|mmk }}</td>
+          <td class="num">{{ s.pit_monthly|mmk }}</td>
+          <td class="num">{{ s.ssb_employee|mmk }}</td>
+          <td class="num">{{ s.total_deductions|mmk }}</td>
+          <td class="num"><strong>{{ s.net_pay|mmk }}</strong></td>
+          <td><a class="btn btn-ghost btn-sm" href="{{ url_for('payslip_detail', slip_id=s.id) }}">Payslip</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="empty">No payslips in this run.</td></tr>
+      {% endfor %}
+      </tbody>
+      {% if slips %}
+      <tfoot class="tfoot">
+        <tr>
+          <td colspan="2">TOTAL</td>
+          <td class="num">{{ totals.gross|mmk }}</td>
+          <td class="num">{{ totals.pit|mmk }}</td>
+          <td class="num">{{ totals.ssb_ee|mmk }}</td>
+          <td class="num">{{ (totals.pit + totals.ssb_ee)|mmk }}</td>
+          <td class="num">{{ totals.net|mmk }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</section>
+{% endblock %}

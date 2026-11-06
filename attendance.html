@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Attendance{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Attendance</h1>
+    <div class="page-sub">{{ date_from }} → {{ date_to }} · unpaid leave reduces basic pay, OT adds earnings</div>
+  </div>
+  <form method="get" class="toolbar">
+    <select name="period" onchange="this.form.submit()">
+      {% for p in periods %}<option value="{{ p }}" {{ 'selected' if p == period }}>{{ p }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="note">
+  <strong>How attendance feeds payroll:</strong> <code>unpaid_leave</code> / <code>absent</code>
+  deduct basic salary at a daily rate (22 paid days/month). <code>ot_hours</code> add overtime
+  at 1.5× hourly rate. <code>present</code> and <code>leave</code> are already covered by monthly salary.
+</div>
+
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Summary — {{ period }}</h2></div>
+  <div class="scroll-x">
+    <table>
+      <thead><tr>
+        <th>Employee</th><th class="num">Present</th><th class="num">Half</th>
+        <th class="num">Leave</th><th class="num">Unpaid</th><th class="num">Absent</th>
+        <th class="num">OT hours</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for r in rows %}
+        {% set s = r.summary %}
+        <tr>
+          <td><strong>{{ r.employee.name }}</strong>
+            <div class="small muted">{{ r.employee.code }} · {{ r.employee.department or '—' }}</div></td>
+          <td class="num">{{ s.days_present }}</td>
+          <td class="num">{{ s.half_days }}</td>
+          <td class="num">{{ s.days_leave }}</td>
+          <td class="num">{{ s.unpaid_days }}</td>
+          <td class="num">{{ s.absent_days }}</td>
+          <td class="num">{{ s.ot_hours }}</td>
+          <td>
+            <details>
+              <summary class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex">Record</summary>
+              <form method="post" action="{{ url_for('attendance_save') }}"
+                    style="margin-top:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;min-width:520px">
+                <input type="hidden" name="employee_id" value="{{ r.employee.id }}">
+                <input type="hidden" name="period" value="{{ period }}">
+                <div class="field"><label>Date</label>
+                  <input type="date" name="work_date" value="{{ date_from }}" required></div>
+                <div class="field"><label>Status</label>
+                  <select name="status">
+                    <option value="present">present</option>
+                    <option value="half_day">half_day</option>
+                    <option value="leave">leave</option>
+                    <option value="unpaid_leave">unpaid_leave</option>
+                    <option value="absent">absent</option>
+                  </select></div>
+                <div class="field"><label>OT hours</label>
+                  <input type="number" name="ot_hours" step="0.5" min="0" value="0"></div>
+                <div class="field"><label>Notes</label>
+                  <input type="text" name="notes"></div>
+                <div class="field" style="justify-content:flex-end">
+                  <button class="btn btn-primary" type="submit">Save</button></div>
+              </form>
+            </details>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="empty"><div class="big">▤</div>No active employees.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
