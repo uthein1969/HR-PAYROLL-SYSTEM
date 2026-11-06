@@ -398,3 +398,4 @@ def create_app(db_path: str | None = None) -> Flask:
         return jsonify({"ok": True, "headcount": get_db().headcount()})
 
     return app
+app = create_app()
